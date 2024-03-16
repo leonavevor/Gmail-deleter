@@ -1,7 +1,13 @@
+from typing import Generator
 from apiclient import errors
 from tqdm import tqdm
 
 from google_client import GoogleClient
+
+# ref: https://github.com/marin117/Gmail-deleter
+# ref: https://github.com/YYLIZH/momomail
+# I forked the above repo and made some changes to the code
+
 
 
 class GmailHandler:
@@ -27,7 +33,7 @@ class GmailHandler:
             except errors.HttpError as error:
                 print('An error occurred: %s' % error)
 
-    def delete_message_perm(self, user_id='me', msg_id=None):
+    def delete_message_perm(self, user_id='me', msg_id=None) -> dict:
         """Completely deletes a message (instead of moving it to trash) with the given msg_id.
 
         Args:
@@ -46,7 +52,41 @@ class GmailHandler:
             except errors.HttpError as error:
                 print('An error occurred: %s' % error)
 
-    def get_labels(self, user_id='me'):
+    def delete_messages(self, user_id: str='me', msgs: list =None) -> None:
+        """Moves the messages to the trash folder.
+
+        Args:
+            user_id: User's email address. The special value "me"
+            can be used to indicate the authenticated user.
+            msgs: Messages to delete.
+
+        Returns:
+            None
+        """
+        if msgs == None:
+            msgs = []
+
+        for msg in msgs:
+            self.delete_message(user_id=user_id, msg_id=msg['id'])
+
+    def delete_messages_perm(self, user_id='me', msgs=None) -> None:
+        """Permanently deletes the messages.
+
+        Args:
+            user_id: User's email address. The special value "me"
+            can be used to indicate the authenticated user.
+            msgs: Messages to delete.
+
+        Returns:
+            None
+        """
+        if msgs == None:
+            msgs = []
+
+        for msg in msgs:
+            self.delete_message_perm(user_id=user_id, msg_id=msg['id'])
+
+    def get_labels(self, user_id='me') -> list:
         """Get a list of all labels in the user's mailbox.
 
         Args:
@@ -61,7 +101,7 @@ class GmailHandler:
         return labels
 
 
-    def list_messages_with_label(self, user_id='me', label_ids=None):
+    def list_messages_with_label(self, user_id='me', label_ids=None) -> Generator[dict, None, None]:
         """List all Messages of the user's mailbox with labelIds applied.
 
         Args:
@@ -95,7 +135,7 @@ class GmailHandler:
         except errors.HttpError as error:
             print('An error occurred: %s' % error)
 
-    def list_messages_matching_query(self, user_id='me', query=None):
+    def list_messages_matching_query(self, user_id='me', query=None) -> Generator[dict, None, None]:
         """List all Messages of the user's mailbox matching the query.
 
         Args:
@@ -126,7 +166,7 @@ class GmailHandler:
             except errors.HttpError as error:
                 print('An error occurred: %s' % error)
 
-    def get_message(self, user_id, msg_id):
+    def get_message(self, user_id, msg_id) -> dict:
         """Get a Message with given ID.
 
         Args:
@@ -146,7 +186,7 @@ class GmailHandler:
         except errors.HttpError as error:
             print('An error occurred: %s' % error)
 
-    def get_sender(self, message, interest):
+    def get_sender(self, message, interest) -> str:
         """Get sender of an email.
 
         Args:
@@ -170,7 +210,7 @@ class GmailHandler:
 class GmailBulkHandler(GmailHandler):
     BATCH_SIZE = 1000
 
-    def delete_messages_perm(self, user_id='me', msgs=None):
+    def delete_messages_perm(self, user_id='me', msgs=None) -> None:
         """Permanently deletes the messages.
 
         Args:

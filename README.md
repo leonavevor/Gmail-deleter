@@ -33,6 +33,10 @@ Installation
 
 (Check requirements.txt for additional informations about requirements for installation)
 
+ - Install requirements with constraints (recommended)
+ - run
+    `pip install -r requirements.txt -c constraints.txt`
+
 Usage
 -----
 

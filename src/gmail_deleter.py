@@ -3,9 +3,11 @@ from __future__ import print_function
 
 import argparse
 import sys
+from typing import Literal
 
 from gmail_handler import GmailBulkHandler
-from oauth2client import tools
+from oauth2client import tools 
+
 
 
 INVALID_INPUT_TEXT = 'Invalid input! Try again'
@@ -26,20 +28,28 @@ try:
 except ImportError:
     arguments = None
 
+args = arguments.parse_args()
+secret_file_path = args.secret
 
-def main():
-    args = arguments.parse_args()
-    secret_file_path = args.secret
+print("secret_file_path: ", secret_file_path)
+print("args: ", args)
+gmail = GmailBulkHandler(secret_file_path, args)
 
-    gmail = GmailBulkHandler(secret_file_path, args)
+
+def main(delete_type: Literal['soft_delete', 'permanent_delete'] = 'soft_delete'):
+    """Main function for the mail deleter.
+       NOTE: soft_delete will move the messages to trash but permanent_delete will delete the messages permanently
+    args:
+        delete_type: Type of deletion. Can be 'soft_delete' or 'permanent_delete'
+    """
 
     while True:
         print(MENU_TEXT)
         try:
             choice = int(input('Choose an option: '))
             if choice == 1:
-                messages = gmail.list_messages_matching_query('label:all')
-                gmail.delete_messages_perm(messages)
+                messages: list = list(gmail.list_messages_matching_query(user_id='me', query='is:unread category:promotions from:(-me) after:2023/3/16 before:2025/3/17'))
+
             elif choice == 2:
                 labels = gmail.get_labels()
                 for i, label in enumerate(labels):
@@ -52,23 +62,51 @@ def main():
                 except ValueError:
                     print(INVALID_INPUT_TEXT)
                 else:
-                    messages = gmail.list_messages_with_label(labels[label_choice-1]['id'])
-                    gmail.delete_messages_perm(messages)
+                    messages: list = list(gmail.list_messages_with_label(label_ids=labels[label_choice-1]['id']))
+
             elif choice == 3:
                 user_choice = str(input('Choose user whose messages you want to delete: '))
-                messages = gmail.list_messages_matching_query('from:' + user_choice)
-                gmail.delete_messages_perm(messages)
+                messages: list = list(gmail.list_messages_matching_query(user_id='me', query='from:' + user_choice))
+
             elif choice == 4:
-                messages = gmail.list_messages_with_label('TRASH')
-                gmail.delete_messages_perm(messages)
+                messages: list = list(gmail.list_messages_with_label(user_id='me', label_ids='TRASH'))
+
             elif choice == 5:
-                messages = gmail.list_messages_with_label('SPAM')
-                gmail.delete_messages_perm(messages)
+                messages: list = list(gmail.list_messages_with_label(user_id='me', label_ids='SPAM'))
+
             else:
                 sys.exit(1)
+
+            print("count of messages: ", sum(1 for _ in messages))
+            print("START messages:===================================")
+            for message in messages:
+                print(message)
+                print("messages: -----------------------------------")
+            print("END messages: ===================================")
+
+            proceed = input('Do you want to proceed with the deletion? (y/n): ')
+            if proceed.lower() == 'y':
+                print('Deleting messages...')
+                delete_msgs(delete_type, messages)
+            else:
+                print('Delete operation cancelled')
+                continue
+
         except ValueError:
             print(INVALID_INPUT_TEXT)
 
 
+def delete_msgs(delete_type: str, messages: list):
+    if delete_type == 'soft_delete':
+        for message in messages:
+           gmail.delete_message(msg_id=message['id'])
+        print('Messages moved to Trash')
+    else:
+        # for message in messages[:10]:
+        #    gmail.delete_message_perm(msg_id=message['id'])
+        gmail.delete_messages_perm(msgs=messages)
+        print('Messages deleted permanently')
+
+
 if __name__ == '__main__':
-    main()
+    main('soft_delete')
